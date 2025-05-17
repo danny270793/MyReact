@@ -11,6 +11,7 @@ export interface NextUnitOfWork extends MyReactElement {
   parent: NextUnitOfWork | null
   sibling: NextUnitOfWork | null
   child: NextUnitOfWork | null
+  alternate: NextUnitOfWork | null
 }
 
 export class MyReact {
@@ -59,6 +60,7 @@ export class MyReact {
   }
   static commitRoot() {
     MyReact.commitWork(MyReact.wipRoot?.child || null)
+    MyReact.currentRoot = MyReact.wipRoot
     MyReact.wipRoot = null
   }
   static commitWork(fiber: NextUnitOfWork | null) {
@@ -83,6 +85,7 @@ export class MyReact {
       parent: null,
       sibling: null,
       child: null,
+      alternate: MyReact.currentRoot,
       props: {
         children: [element],
       },
@@ -95,6 +98,7 @@ export class MyReact {
   // create microtasks to not interrupt browser
   static nextUnitOfWork: NextUnitOfWork | null = null
   static wipRoot: NextUnitOfWork | null = null
+  static currentRoot: NextUnitOfWork | null = null
   static workLoop(deadline: IdleDeadline) {
     let shouldYield = false
     while (MyReact.nextUnitOfWork && !shouldYield) {
@@ -130,6 +134,7 @@ export class MyReact {
         dom: null,
         sibling: null,
         child: null,
+        alternate: null,
       }
 
       if (index === 0) {
