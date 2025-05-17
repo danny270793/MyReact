@@ -1,18 +1,10 @@
+import { Logger } from './logger'
+
 export interface MyReactElement {
   type: string | Function | null
   props: {
     [key: string]: any
     children: MyReactElement[]
-  }
-}
-
-class Logger {
-  private name: string
-  constructor(name: string) {
-    this.name = name
-  }
-  debug(text: string) {
-    console.log(`DEBUG ${this.name} ${text}`)
   }
 }
 
