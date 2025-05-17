@@ -10,13 +10,13 @@ export class MyReact {
   static createElement(
     type: string,
     props: { [key: string]: any } | null = null,
-    ...children: MyReactElement[]
+    ...children: string[] | MyReactElement[]
   ): MyReactElement {
     return {
       type,
       props: {
         ...props,
-        children: children.map((child: MyReactElement) =>
+        children: children.map((child: string | MyReactElement) =>
           typeof child === 'object' ? child : MyReact.createTextElement(child),
         ),
       },
@@ -31,5 +31,8 @@ export class MyReact {
       },
     }
   }
-  static render(element: MyReactElement, container: HTMLElement) {}
+  static render(element: MyReactElement, container: HTMLElement) {
+    const dom: HTMLElement = document.createElement(element.type)
+    container.appendChild(dom)
+  }
 }
