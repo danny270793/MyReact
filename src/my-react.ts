@@ -56,4 +56,21 @@ export class MyReact {
     // append to container
     container.appendChild(dom)
   }
+
+  // create microtasks to not interrupt browser
+  static nextUnitOfWork: any = null
+  static workLoop(deadline: IdleDeadline) {
+    let shouldYield = false
+    while (MyReact.nextUnitOfWork && !shouldYield) {
+      // perform work
+      MyReact.nextUnitOfWork = MyReact.performUnitOfWork(MyReact.nextUnitOfWork)
+      // check if we have time to do more work
+      shouldYield = deadline.timeRemaining() < 1
+    }
+    // if we have no more work, schedule the next unit of work
+    requestIdleCallback(MyReact.workLoop)
+  }
+  static performUnitOfWork(nextUnitOfWork: any): any {}
 }
+
+requestIdleCallback(MyReact.workLoop)
