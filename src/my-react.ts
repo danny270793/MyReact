@@ -1,5 +1,5 @@
 export interface MyReactElement {
-  type: string | null
+  type: string | Function | null
   props: {
     [key: string]: any
     children: MyReactElement[]
@@ -17,7 +17,7 @@ export interface NextUnitOfWork extends MyReactElement {
 
 export class MyReact {
   static createElement(
-    type: string,
+    type: string | Function,
     props: { [key: string]: any } | null = null,
     ...children: string[] | MyReactElement[]
   ): MyReactElement {
@@ -45,7 +45,10 @@ export class MyReact {
     const dom: HTMLElement | Text =
       fiber.type == 'TEXT_ELEMENT'
         ? document.createTextNode('')
-        : document.createElement(fiber.type || '')
+        : fiber.type instanceof Function
+          ? // TODO
+            document.createTextNode('function')
+          : document.createElement(fiber.type || '')
 
     // assig props to node
     const isProperty = (key: string) => key !== 'children'
@@ -123,24 +126,40 @@ export class MyReact {
     if (!fiber) {
       return
     }
-    if (!fiber.parent?.dom) {
-      throw new Error('No parent dom found')
+
+    if (!fiber.parent) {
+      throw new Error('No parent found')
     }
-    const domParent: HTMLElement | Text = fiber.parent.dom
-    if (!fiber.dom) {
-      throw new Error('No dom found')
+
+    let domParentFiber: NextUnitOfWork = fiber.parent
+
+    while (!domParentFiber.dom) {
+      if (domParentFiber.parent) {
+        domParentFiber = domParentFiber.parent
+      }
     }
+    const domParent = domParentFiber.dom
 
     if (fiber.effectTag === 'PLACEMENT' && fiber.dom != null) {
       domParent.appendChild(fiber.dom)
     } else if (fiber.effectTag === 'UPDATE' && fiber.dom != null) {
       MyReact.updateDom(fiber.dom, fiber.alternate?.props || {}, fiber.props)
     } else if (fiber.effectTag === 'DELETION') {
-      domParent.removeChild(fiber.dom)
+      MyReact.commitDeletion(fiber, domParent)
     }
 
     MyReact.commitWork(fiber.child)
     MyReact.commitWork(fiber.sibling)
+  }
+  static commitDeletion(fiber: NextUnitOfWork, domParent: HTMLElement | Text) {
+    if (fiber.dom) {
+      domParent.removeChild(fiber.dom)
+    } else {
+      if (!fiber.child) {
+        throw new Error('No child found')
+      }
+      MyReact.commitDeletion(fiber.child, domParent)
+    }
   }
   static render(element: MyReactElement, container: HTMLElement | Text) {
     MyReact.wipRoot = {
@@ -183,15 +202,30 @@ export class MyReact {
     // if we have no more work, schedule the next unit of work
     requestIdleCallback(MyReact.workLoop)
   }
-  static performUnitOfWork(nextUnitOfWork: NextUnitOfWork): any {
+  static updateFunctionComponent(fiber: NextUnitOfWork) {
+    const functionComponent: Function = fiber.type as Function
+    const children: MyReactElement = functionComponent(fiber.props)
+    const childrens: MyReactElement[] = [children]
+    MyReact.reconcileChildren(fiber, childrens)
+  }
+  static updateHostComponent(fiber: NextUnitOfWork) {
     // add dom node
-    if (!nextUnitOfWork.dom) {
-      nextUnitOfWork.dom = MyReact.createDom(nextUnitOfWork)
+    if (!fiber.dom) {
+      fiber.dom = MyReact.createDom(fiber)
     }
 
     // create new fibers
-    const elements: MyReactElement[] = nextUnitOfWork.props.children
-    MyReact.reconcileChildren(nextUnitOfWork, elements)
+    MyReact.reconcileChildren(fiber, fiber.props.children)
+  }
+  static performUnitOfWork(nextUnitOfWork: NextUnitOfWork): any {
+    console.log(nextUnitOfWork)
+
+    const isFunctionComponent: boolean = nextUnitOfWork.type instanceof Function
+    if (isFunctionComponent) {
+      MyReact.updateFunctionComponent(nextUnitOfWork)
+    } else {
+      MyReact.updateHostComponent(nextUnitOfWork)
+    }
 
     // return next unit of work
     if (nextUnitOfWork.child) {
