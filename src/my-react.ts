@@ -12,6 +12,7 @@ export interface NextUnitOfWork extends MyReactElement {
   sibling: NextUnitOfWork | null
   child: NextUnitOfWork | null
   alternate: NextUnitOfWork | null
+  effectTag: string | null
 }
 
 export class MyReact {
@@ -59,9 +60,41 @@ export class MyReact {
     return dom
   }
   static commitRoot() {
+    MyReact.deletions.forEach(MyReact.commitWork)
     MyReact.commitWork(MyReact.wipRoot?.child || null)
     MyReact.currentRoot = MyReact.wipRoot
     MyReact.wipRoot = null
+  }
+  static isProperty = (key: string) => key !== 'children'
+  static isNew =
+    (prev: { [key: string]: any }, next: { [key: string]: any }) =>
+    (key: string) =>
+      prev[key] !== next[key]
+  static isGone =
+    (prev: { [key: string]: any }, next: { [key: string]: any }) =>
+    (key: string) =>
+      !(key in next)
+  static updateDom(
+    dom: HTMLElement | Text,
+    prevProps: { [key: string]: any },
+    nextProps: { [key: string]: any },
+  ) {
+    // Remove old properties
+    Object.keys(prevProps)
+      .filter(MyReact.isProperty)
+      .filter(MyReact.isGone(prevProps, nextProps))
+      .forEach((name) => {
+        const domAsAny: any = dom as any
+        domAsAny[name] = ''
+      })
+    // Set new or changed properties
+    Object.keys(nextProps)
+      .filter(MyReact.isProperty)
+      .filter(MyReact.isNew(prevProps, nextProps))
+      .forEach((name) => {
+        const domAsAny: any = dom as any
+        domAsAny[name] = nextProps[name]
+      })
   }
   static commitWork(fiber: NextUnitOfWork | null) {
     if (!fiber) {
@@ -74,7 +107,15 @@ export class MyReact {
     if (!fiber.dom) {
       throw new Error('No dom found')
     }
-    domParent.appendChild(fiber.dom)
+
+    if (fiber.effectTag === 'PLACEMENT' && fiber.dom != null) {
+      domParent.appendChild(fiber.dom)
+    } else if (fiber.effectTag === 'UPDATE' && fiber.dom != null) {
+      MyReact.updateDom(fiber.dom, fiber.alternate?.props || {}, fiber.props)
+    } else if (fiber.effectTag === 'DELETION') {
+      domParent.removeChild(fiber.dom)
+    }
+
     MyReact.commitWork(fiber.child)
     MyReact.commitWork(fiber.sibling)
   }
@@ -89,7 +130,10 @@ export class MyReact {
       props: {
         children: [element],
       },
+      effectTag: null,
     }
+
+    MyReact.deletions = []
 
     // define next unit of work
     MyReact.nextUnitOfWork = MyReact.wipRoot
@@ -99,6 +143,7 @@ export class MyReact {
   static nextUnitOfWork: NextUnitOfWork | null = null
   static wipRoot: NextUnitOfWork | null = null
   static currentRoot: NextUnitOfWork | null = null
+  static deletions: NextUnitOfWork[] = []
   static workLoop(deadline: IdleDeadline) {
     let shouldYield = false
     while (MyReact.nextUnitOfWork && !shouldYield) {
@@ -142,17 +187,49 @@ export class MyReact {
     elements: MyReactElement[],
   ) {
     let index: number = 0
+    let oldFiber: NextUnitOfWork | null =
+      wipFiber.alternate && wipFiber.alternate.child
     let prevSibling: NextUnitOfWork | null = null
-    while (index < elements.length) {
+    while (index < elements.length || oldFiber != null) {
       const element: MyReactElement = elements[index]
-      const newFiber: NextUnitOfWork = {
-        type: element.type,
-        props: element.props,
-        parent: wipFiber,
-        dom: null,
-        sibling: null,
-        child: null,
-        alternate: null,
+
+      let newFiber: NextUnitOfWork | null = null
+
+      const sameType = oldFiber && element && element.type == oldFiber.type
+      if (sameType) {
+        // update the node
+        newFiber = {
+          type: oldFiber!.type,
+          props: element.props,
+          dom: oldFiber!.dom,
+          parent: wipFiber,
+          alternate: oldFiber,
+          effectTag: 'UPDATE',
+          sibling: null,
+          child: null,
+        }
+      }
+      if (element && !sameType) {
+        // add this node
+        newFiber = {
+          type: element.type,
+          props: element.props,
+          dom: null,
+          parent: wipFiber,
+          alternate: null,
+          effectTag: 'PLACEMENT',
+          sibling: null,
+          child: null,
+        }
+      }
+      if (oldFiber && !sameType) {
+        // delete the oldFiber's node
+        oldFiber.effectTag = 'DELETION'
+        MyReact.deletions.push(oldFiber)
+      }
+
+      if (oldFiber) {
+        oldFiber = oldFiber.sibling
       }
 
       if (index === 0) {
