@@ -1,4 +1,4 @@
-import { MyReact, MyReactDOM, type MyReactElement } from './my-react'
+import { MyReact, MyReactDOM, type MyReactElement } from './libraries/my-react'
 
 const element: HTMLElement | null = document.getElementById('app')
 if (!element) {
