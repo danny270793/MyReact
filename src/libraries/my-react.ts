@@ -4,7 +4,18 @@ export class MyReact {
       type,
       props: {
         ...props,
-        children,
+        children: children.map((child: any) =>
+          typeof child === 'object' ? child : MyReact.createTextElement(child),
+        ),
+      },
+    }
+  }
+  static createTextElement(text: string) {
+    return {
+      type: 'TEXT_ELEMENT',
+      props: {
+        nodeValue: text,
+        children: [],
       },
     }
   }

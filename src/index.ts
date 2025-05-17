@@ -7,4 +7,4 @@ const element = MyReact.createElement(
   MyReact.createElement('b'),
 )
 // const container = document.getElementById('root')
-console.log(element)
+console.log(JSON.stringify(element, null, 2))
