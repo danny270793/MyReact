@@ -6,6 +6,23 @@ export interface MyReactElement {
   }
 }
 
+class Logger {
+  private name: string
+  constructor(name: string) {
+    this.name = name
+  }
+  debug(text: string) {
+    console.log(`DEBUG ${this.name} ${text}`)
+  }
+}
+
+const logger: Logger = new Logger('/src/my-react.ts')
+
+export interface Hook<T> {
+  state: T
+  queue: any[]
+}
+
 export interface NextUnitOfWork extends MyReactElement {
   dom: HTMLElement | Text | null
   parent: NextUnitOfWork | null
@@ -13,6 +30,7 @@ export interface NextUnitOfWork extends MyReactElement {
   child: NextUnitOfWork | null
   alternate: NextUnitOfWork | null
   effectTag: string | null
+  hooks: any[]
 }
 
 export class MyReact {
@@ -39,6 +57,48 @@ export class MyReact {
         children: [],
       },
     }
+  }
+  static useState<T>(initial: T): [T, (state: (state: T) => T) => void] {
+    const oldHook: Hook<T> | null =
+      MyReactDOM.wipFiber?.alternate &&
+      MyReactDOM.wipFiber.alternate.hooks &&
+      MyReactDOM.wipFiber.alternate.hooks[MyReactDOM.hookIndex || 0]
+
+    const hook: Hook<T> = {
+      state: oldHook ? oldHook.state : initial,
+      queue: [],
+    }
+
+    const actions: ((oldState: T) => T)[] = oldHook ? oldHook.queue : []
+    actions.forEach((action: (oldState: T) => T) => {
+      hook.state = action(hook.state)
+    })
+
+    const setState = (action: (oldState: T) => T): void => {
+      logger.debug('calling setState')
+      hook.queue.push(action)
+      MyReactDOM.wipRoot = {
+        dom: MyReactDOM.currentRoot!.dom,
+        props: MyReactDOM.currentRoot!.props,
+        alternate: MyReactDOM.currentRoot,
+        parent: null,
+        sibling: null,
+        child: null,
+        effectTag: null,
+        type: null,
+        hooks: [],
+      }
+      MyReactDOM.nextUnitOfWork = MyReactDOM.wipRoot
+      MyReactDOM.deletions = []
+    }
+
+    if (MyReactDOM.wipFiber) {
+      MyReactDOM.wipFiber.hooks.push(hook)
+    }
+    if (MyReactDOM.hookIndex) {
+      MyReactDOM.hookIndex += 1
+    }
+    return [hook.state, setState]
   }
 }
 export class MyReactDOM {
@@ -175,6 +235,7 @@ export class MyReactDOM {
         children: [element],
       },
       effectTag: null,
+      hooks: [],
     }
 
     MyReactDOM.deletions = []
@@ -206,7 +267,13 @@ export class MyReactDOM {
     // if we have no more work, schedule the next unit of work
     requestIdleCallback(MyReactDOM.workLoop)
   }
+  static wipFiber: NextUnitOfWork | null = null
+  static hookIndex: number | null = null
   static updateFunctionComponent(fiber: NextUnitOfWork) {
+    MyReactDOM.wipFiber = fiber
+    MyReactDOM.hookIndex = 0
+    MyReactDOM.wipFiber.hooks = []
+
     const functionComponent: Function = fiber.type as Function
     const children: MyReactElement = functionComponent(fiber.props)
     const childrens: MyReactElement[] = [children]
@@ -222,12 +289,14 @@ export class MyReactDOM {
     MyReactDOM.reconcileChildren(fiber, fiber.props.children)
   }
   static performUnitOfWork(nextUnitOfWork: NextUnitOfWork): any {
-    console.log(nextUnitOfWork)
-
     const isFunctionComponent: boolean = nextUnitOfWork.type instanceof Function
     if (isFunctionComponent) {
+      logger.debug(
+        `performUnitOfWork ${(nextUnitOfWork.type as Function).name}`,
+      )
       MyReactDOM.updateFunctionComponent(nextUnitOfWork)
     } else {
+      logger.debug(`performUnitOfWork ${nextUnitOfWork.type}`)
       MyReactDOM.updateHostComponent(nextUnitOfWork)
     }
 
@@ -268,6 +337,7 @@ export class MyReactDOM {
           effectTag: 'UPDATE',
           sibling: null,
           child: null,
+          hooks: [],
         }
       }
       if (element && !sameType) {
@@ -281,6 +351,7 @@ export class MyReactDOM {
           effectTag: 'PLACEMENT',
           sibling: null,
           child: null,
+          hooks: [],
         }
       }
       if (oldFiber && !sameType) {
