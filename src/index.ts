@@ -6,4 +6,5 @@ const element = MyReact.createElement(
   MyReact.createElement('a', null, 'bar'),
   MyReact.createElement('b'),
 )
-const container = document.getElementById('root')
+// const container = document.getElementById('root')
+console.log(element)
