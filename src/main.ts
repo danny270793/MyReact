@@ -7,8 +7,8 @@ if (!element) {
 
 const app: MyReactElement = MyReact.createElement(
   'div',
-  { id: 'foo' },
-  MyReact.createElement('div', { id: 'bar' }, 'bar'),
-  MyReact.createElement('div', null, 'baz'),
+  { className: 'w3-row' },
+  MyReact.createElement('div', { className: 'w3-half w3-green' }, 'bar'),
+  MyReact.createElement('div', { className: 'w3-half w3-blue' }, 'baz'),
 )
 MyReact.render(app, element)
