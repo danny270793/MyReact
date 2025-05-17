@@ -6,7 +6,11 @@ if (!element) {
 }
 
 function Counter(props: { [key: string]: string }): MyReactElement {
-  const value: number = 0
+  let value: number = 0
+  setInterval(() => {
+    console.log(`increasing to ${value}`)
+    value++
+  }, 1000)
   return MyReact.createElement(
     'div',
     null,
@@ -25,9 +29,5 @@ function Counter(props: { [key: string]: string }): MyReactElement {
   )
 }
 
-const app: MyReactElement = MyReact.createElement(
-  'div',
-  null,
-  Counter({ title: 'Value' }),
-)
+const app: MyReactElement = MyReact.createElement(Counter, { title: 'Value' })
 MyReact.render(app, element)
