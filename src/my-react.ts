@@ -123,31 +123,7 @@ export class MyReact {
 
     // create new fibers
     const elements: MyReactElement[] = nextUnitOfWork.props.children
-    let index: number = 0
-    let prevSibling: NextUnitOfWork | null = null
-    while (index < elements.length) {
-      const element: MyReactElement = elements[index]
-      const newFiber: NextUnitOfWork = {
-        type: element.type,
-        props: element.props,
-        parent: nextUnitOfWork,
-        dom: null,
-        sibling: null,
-        child: null,
-        alternate: null,
-      }
-
-      if (index === 0) {
-        nextUnitOfWork.child = newFiber
-      } else {
-        if (!prevSibling) {
-          throw new Error('No previous sibling found')
-        }
-        prevSibling.sibling = newFiber
-      }
-      prevSibling = newFiber
-      index++
-    }
+    MyReact.reconcileChildren(nextUnitOfWork, elements)
 
     // return next unit of work
     if (nextUnitOfWork.child) {
@@ -159,6 +135,36 @@ export class MyReact {
         return nextFiber.sibling
       }
       nextFiber = nextFiber.parent
+    }
+  }
+  static reconcileChildren(
+    wipFiber: NextUnitOfWork,
+    elements: MyReactElement[],
+  ) {
+    let index: number = 0
+    let prevSibling: NextUnitOfWork | null = null
+    while (index < elements.length) {
+      const element: MyReactElement = elements[index]
+      const newFiber: NextUnitOfWork = {
+        type: element.type,
+        props: element.props,
+        parent: wipFiber,
+        dom: null,
+        sibling: null,
+        child: null,
+        alternate: null,
+      }
+
+      if (index === 0) {
+        wipFiber.child = newFiber
+      } else {
+        if (!prevSibling) {
+          throw new Error('No previous sibling found')
+        }
+        prevSibling.sibling = newFiber
+      }
+      prevSibling = newFiber
+      index++
     }
   }
 }
