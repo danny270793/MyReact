@@ -6,26 +6,42 @@ if (!element) {
 }
 
 function Counter(props: { [key: string]: string }): MyReactElement {
-  let value: number = 0
-  setInterval(() => {
-    console.log(`increasing to ${value}`)
-    value++
-  }, 1000)
+  const [counter, setCounter] = MyReact.useState<number>(0)
   return MyReact.createElement(
     'div',
     null,
-    MyReact.createElement('h1', null, `${props.title} ${value}`),
+    MyReact.createElement('h1', null, `${props.title} ${counter}`),
     MyReact.createElement(
       'button',
-      { className: 'w3-button w3-blue' },
+      {
+        className: 'w3-button w3-blue',
+        onclick: () => setCounter((counter: number) => counter + 1),
+      },
       'Increment',
     ),
     MyReact.createElement(
       'button',
-      { className: 'w3-button w3-green' },
+      {
+        className: 'w3-button w3-green',
+        onclick: () => setCounter((counter: number) => counter - 1),
+      },
       'Decrement',
     ),
-    MyReact.createElement('button', { className: 'w3-button w3-red' }, 'Reset'),
+    MyReact.createElement(
+      'button',
+      {
+        className: 'w3-button w3-red',
+        onclick: () => setCounter(() => 0),
+      },
+      'Reset',
+    ),
+    MyReact.createElement(
+      'div',
+      {},
+      counter > 10
+        ? MyReact.createElement('span', {}, 'High')
+        : MyReact.createElement('span', {}, 'Low'),
+    ),
   )
 }
 
