@@ -1,13 +1,17 @@
 export interface MyReactElement {
-    type: string
-    props: {
-        [key: string]: any
-        children: MyReactElement[]
-    }
+  type: string
+  props: {
+    [key: string]: any
+    children: MyReactElement[]
+  }
 }
 
 export class MyReact {
-  static createElement(type: string, props: {[key: string]: any}|null = null, ...children: MyReactElement[]): MyReactElement {
+  static createElement(
+    type: string,
+    props: { [key: string]: any } | null = null,
+    ...children: MyReactElement[]
+  ): MyReactElement {
     return {
       type,
       props: {
