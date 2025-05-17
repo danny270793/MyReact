@@ -5,10 +5,29 @@ if (!element) {
   throw new Error('No root element found')
 }
 
+function Counter(props: { [key: string]: string }): MyReactElement {
+  const value: number = 0
+  return MyReact.createElement(
+    'div',
+    null,
+    MyReact.createElement('h1', null, `${props.title} ${value}`),
+    MyReact.createElement(
+      'button',
+      { className: 'w3-button w3-blue' },
+      'Increment',
+    ),
+    MyReact.createElement(
+      'button',
+      { className: 'w3-button w3-green' },
+      'Decrement',
+    ),
+    MyReact.createElement('button', { className: 'w3-button w3-red' }, 'Reset'),
+  )
+}
+
 const app: MyReactElement = MyReact.createElement(
   'div',
-  { className: 'w3-row' },
-  MyReact.createElement('div', { className: 'w3-half w3-green' }, 'bar'),
-  MyReact.createElement('div', { className: 'w3-half w3-blue' }, 'baz'),
+  null,
+  Counter({ title: 'Value' }),
 )
 MyReact.render(app, element)
