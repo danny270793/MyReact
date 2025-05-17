@@ -65,7 +65,8 @@ export class MyReact {
     MyReact.currentRoot = MyReact.wipRoot
     MyReact.wipRoot = null
   }
-  static isProperty = (key: string) => key !== 'children'
+  static isProperty = (key: string) =>
+    key !== 'children' && !MyReact.isEvent(key)
   static isNew =
     (prev: { [key: string]: any }, next: { [key: string]: any }) =>
     (key: string) =>
@@ -74,11 +75,24 @@ export class MyReact {
     (prev: { [key: string]: any }, next: { [key: string]: any }) =>
     (key: string) =>
       !(key in next)
+  static isEvent = (key: string) => key.startsWith('on')
   static updateDom(
     dom: HTMLElement | Text,
     prevProps: { [key: string]: any },
     nextProps: { [key: string]: any },
   ) {
+    //Remove old or changed event listeners
+    Object.keys(prevProps)
+      .filter(MyReact.isEvent)
+      .filter(
+        (key) =>
+          !(key in nextProps) || MyReact.isNew(prevProps, nextProps)(key),
+      )
+      .forEach((name) => {
+        const eventType = name.toLowerCase().substring(2)
+        dom.removeEventListener(eventType, prevProps[name])
+      })
+
     // Remove old properties
     Object.keys(prevProps)
       .filter(MyReact.isProperty)
@@ -94,6 +108,15 @@ export class MyReact {
       .forEach((name) => {
         const domAsAny: any = dom as any
         domAsAny[name] = nextProps[name]
+      })
+
+    // Add event listeners
+    Object.keys(nextProps)
+      .filter(MyReact.isEvent)
+      .filter(MyReact.isNew(prevProps, nextProps))
+      .forEach((name) => {
+        const eventType = name.toLowerCase().substring(2)
+        dom.addEventListener(eventType, nextProps[name])
       })
   }
   static commitWork(fiber: NextUnitOfWork | null) {
