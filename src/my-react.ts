@@ -40,6 +40,8 @@ export class MyReact {
       },
     }
   }
+}
+export class MyReactDOM {
   static createDom(fiber: MyReactElement): HTMLElement | Text {
     // create dom node
     const dom: HTMLElement | Text =
@@ -63,13 +65,13 @@ export class MyReact {
     return dom
   }
   static commitRoot() {
-    MyReact.deletions.forEach(MyReact.commitWork)
-    MyReact.commitWork(MyReact.wipRoot?.child || null)
-    MyReact.currentRoot = MyReact.wipRoot
-    MyReact.wipRoot = null
+    MyReactDOM.deletions.forEach(MyReactDOM.commitWork)
+    MyReactDOM.commitWork(MyReactDOM.wipRoot?.child || null)
+    MyReactDOM.currentRoot = MyReactDOM.wipRoot
+    MyReactDOM.wipRoot = null
   }
   static isProperty = (key: string) =>
-    key !== 'children' && !MyReact.isEvent(key)
+    key !== 'children' && !MyReactDOM.isEvent(key)
   static isNew =
     (prev: { [key: string]: any }, next: { [key: string]: any }) =>
     (key: string) =>
@@ -86,10 +88,10 @@ export class MyReact {
   ) {
     //Remove old or changed event listeners
     Object.keys(prevProps)
-      .filter(MyReact.isEvent)
+      .filter(MyReactDOM.isEvent)
       .filter(
         (key) =>
-          !(key in nextProps) || MyReact.isNew(prevProps, nextProps)(key),
+          !(key in nextProps) || MyReactDOM.isNew(prevProps, nextProps)(key),
       )
       .forEach((name) => {
         const eventType = name.toLowerCase().substring(2)
@@ -98,16 +100,16 @@ export class MyReact {
 
     // Remove old properties
     Object.keys(prevProps)
-      .filter(MyReact.isProperty)
-      .filter(MyReact.isGone(prevProps, nextProps))
+      .filter(MyReactDOM.isProperty)
+      .filter(MyReactDOM.isGone(prevProps, nextProps))
       .forEach((name) => {
         const domAsAny: any = dom as any
         domAsAny[name] = ''
       })
     // Set new or changed properties
     Object.keys(nextProps)
-      .filter(MyReact.isProperty)
-      .filter(MyReact.isNew(prevProps, nextProps))
+      .filter(MyReactDOM.isProperty)
+      .filter(MyReactDOM.isNew(prevProps, nextProps))
       .forEach((name) => {
         const domAsAny: any = dom as any
         domAsAny[name] = nextProps[name]
@@ -115,8 +117,8 @@ export class MyReact {
 
     // Add event listeners
     Object.keys(nextProps)
-      .filter(MyReact.isEvent)
-      .filter(MyReact.isNew(prevProps, nextProps))
+      .filter(MyReactDOM.isEvent)
+      .filter(MyReactDOM.isNew(prevProps, nextProps))
       .forEach((name) => {
         const eventType = name.toLowerCase().substring(2)
         dom.addEventListener(eventType, nextProps[name])
@@ -143,13 +145,13 @@ export class MyReact {
     if (fiber.effectTag === 'PLACEMENT' && fiber.dom != null) {
       domParent.appendChild(fiber.dom)
     } else if (fiber.effectTag === 'UPDATE' && fiber.dom != null) {
-      MyReact.updateDom(fiber.dom, fiber.alternate?.props || {}, fiber.props)
+      MyReactDOM.updateDom(fiber.dom, fiber.alternate?.props || {}, fiber.props)
     } else if (fiber.effectTag === 'DELETION') {
-      MyReact.commitDeletion(fiber, domParent)
+      MyReactDOM.commitDeletion(fiber, domParent)
     }
 
-    MyReact.commitWork(fiber.child)
-    MyReact.commitWork(fiber.sibling)
+    MyReactDOM.commitWork(fiber.child)
+    MyReactDOM.commitWork(fiber.sibling)
   }
   static commitDeletion(fiber: NextUnitOfWork, domParent: HTMLElement | Text) {
     if (fiber.dom) {
@@ -158,27 +160,27 @@ export class MyReact {
       if (!fiber.child) {
         throw new Error('No child found')
       }
-      MyReact.commitDeletion(fiber.child, domParent)
+      MyReactDOM.commitDeletion(fiber.child, domParent)
     }
   }
   static render(element: MyReactElement, container: HTMLElement | Text) {
-    MyReact.wipRoot = {
+    MyReactDOM.wipRoot = {
       dom: container,
       type: null,
       parent: null,
       sibling: null,
       child: null,
-      alternate: MyReact.currentRoot,
+      alternate: MyReactDOM.currentRoot,
       props: {
         children: [element],
       },
       effectTag: null,
     }
 
-    MyReact.deletions = []
+    MyReactDOM.deletions = []
 
     // define next unit of work
-    MyReact.nextUnitOfWork = MyReact.wipRoot
+    MyReactDOM.nextUnitOfWork = MyReactDOM.wipRoot
   }
 
   // create microtasks to not interrupt browser
@@ -188,43 +190,45 @@ export class MyReact {
   static deletions: NextUnitOfWork[] = []
   static workLoop(deadline: IdleDeadline) {
     let shouldYield = false
-    while (MyReact.nextUnitOfWork && !shouldYield) {
+    while (MyReactDOM.nextUnitOfWork && !shouldYield) {
       // perform work
-      MyReact.nextUnitOfWork = MyReact.performUnitOfWork(MyReact.nextUnitOfWork)
+      MyReactDOM.nextUnitOfWork = MyReactDOM.performUnitOfWork(
+        MyReactDOM.nextUnitOfWork,
+      )
       // check if we have time to do more work
       shouldYield = deadline.timeRemaining() < 1
     }
 
-    if (!MyReact.nextUnitOfWork && MyReact.wipRoot) {
-      MyReact.commitRoot()
+    if (!MyReactDOM.nextUnitOfWork && MyReactDOM.wipRoot) {
+      MyReactDOM.commitRoot()
     }
 
     // if we have no more work, schedule the next unit of work
-    requestIdleCallback(MyReact.workLoop)
+    requestIdleCallback(MyReactDOM.workLoop)
   }
   static updateFunctionComponent(fiber: NextUnitOfWork) {
     const functionComponent: Function = fiber.type as Function
     const children: MyReactElement = functionComponent(fiber.props)
     const childrens: MyReactElement[] = [children]
-    MyReact.reconcileChildren(fiber, childrens)
+    MyReactDOM.reconcileChildren(fiber, childrens)
   }
   static updateHostComponent(fiber: NextUnitOfWork) {
     // add dom node
     if (!fiber.dom) {
-      fiber.dom = MyReact.createDom(fiber)
+      fiber.dom = MyReactDOM.createDom(fiber)
     }
 
     // create new fibers
-    MyReact.reconcileChildren(fiber, fiber.props.children)
+    MyReactDOM.reconcileChildren(fiber, fiber.props.children)
   }
   static performUnitOfWork(nextUnitOfWork: NextUnitOfWork): any {
     console.log(nextUnitOfWork)
 
     const isFunctionComponent: boolean = nextUnitOfWork.type instanceof Function
     if (isFunctionComponent) {
-      MyReact.updateFunctionComponent(nextUnitOfWork)
+      MyReactDOM.updateFunctionComponent(nextUnitOfWork)
     } else {
-      MyReact.updateHostComponent(nextUnitOfWork)
+      MyReactDOM.updateHostComponent(nextUnitOfWork)
     }
 
     // return next unit of work
@@ -282,7 +286,7 @@ export class MyReact {
       if (oldFiber && !sameType) {
         // delete the oldFiber's node
         oldFiber.effectTag = 'DELETION'
-        MyReact.deletions.push(oldFiber)
+        MyReactDOM.deletions.push(oldFiber)
       }
 
       if (oldFiber) {
@@ -303,4 +307,4 @@ export class MyReact {
   }
 }
 
-requestIdleCallback(MyReact.workLoop)
+requestIdleCallback(MyReactDOM.workLoop)
