@@ -236,15 +236,17 @@ export class MyReactDOM {
     MyReactDOM.nextUnitOfWork = MyReactDOM.wipRoot
   }
 
-  // create microtasks to not interrupt browser
+  // create microtasks to not interrupt browser main thread
   static nextUnitOfWork: NextUnitOfWork | null = null
+  // root partially reconciled
   static wipRoot: NextUnitOfWork | null = null
+  // virutal dom
   static currentRoot: NextUnitOfWork | null = null
   static deletions: NextUnitOfWork[] = []
   static workLoop(deadline: IdleDeadline) {
     let shouldYield = false
     while (MyReactDOM.nextUnitOfWork && !shouldYield) {
-      // perform work
+      // perform unit of work
       MyReactDOM.nextUnitOfWork = MyReactDOM.performUnitOfWork(
         MyReactDOM.nextUnitOfWork,
       )
@@ -252,6 +254,7 @@ export class MyReactDOM {
       shouldYield = deadline.timeRemaining() < 1
     }
 
+    // if there is no more work to do, commit to the the root
     if (!MyReactDOM.nextUnitOfWork && MyReactDOM.wipRoot) {
       MyReactDOM.commitRoot()
     }
