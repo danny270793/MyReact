@@ -1,4 +1,4 @@
-import { MyReact, type MyReactElement } from './my-react'
+import { MyReact, MyReactDOM, type MyReactElement } from './my-react'
 
 const element: HTMLElement | null = document.getElementById('app')
 if (!element) {
@@ -30,4 +30,4 @@ function Counter(props: { [key: string]: string }): MyReactElement {
 }
 
 const app: MyReactElement = MyReact.createElement(Counter, { title: 'Value' })
-MyReact.render(app, element)
+MyReactDOM.render(app, element)
